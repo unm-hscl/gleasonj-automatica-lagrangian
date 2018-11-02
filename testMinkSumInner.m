@@ -77,7 +77,8 @@ plot(A,'color','c');
 plot(B,'color','m');
 leg=legend('A+B','minkSumInner(.,.,A)','minkSumInner(.,.,D)','minkSumInner(.,.,B)','A','B');
 set(leg,'Location','SouthEast');
-
+axis square
+box on;
 % disp('Testing cvx based containment');
 % for vertex_indx = 1:size(C_inner.V,1)
 %     test_vertex = C_inner.V(vertex_indx,:);

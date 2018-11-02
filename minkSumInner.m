@@ -2,7 +2,7 @@ function polyInner = minkSumInner(polyA, polyB, varargin)
     % Computes the scaling and shifting for the template polytope polyC
     % such that it is completely contained in the polytope polyA + polyB
     % If no template is provided, we use polyA as the template
-    
+
     if nargin > 3
         throwAsCaller(SrtInvalidArgsError('Too many input arguments'));
     elseif nargin == 3
@@ -10,12 +10,23 @@ function polyInner = minkSumInner(polyA, polyB, varargin)
     else
         polyC = polyA;
     end
+    polyA.minHRep();
+    polyB.minHRep();
+    polyC.minHRep();
+    if ~isempty(polyC.He)
+        throwAsCaller(SrtInvalidArgsError(['Template must have only ',...
+            'inequalities']));
+    end
     if isEmptySet(polyA) || isEmptySet(polyB) || isEmptySet(polyC)
         throwAsCaller(SrtInvalidArgsError('Empty set provided as arguments'));
     end
     if ~((polyA.Dim == polyB.Dim) && (polyB.Dim == polyC.Dim))
         throwAsCaller(SrtInvalidArgsError('Mismatch in polytope dimensions'));
     end
+    
+    % To avoid the wierd CVX error of undefined 'variable'
+    cvx_clear
+    
     % Ensure that polyC is "centered" (This way uniform scaling is not partial)
     polyC = polyC - polyC.chebyCenter.x;    
     
@@ -29,7 +40,7 @@ function polyInner = minkSumInner(polyA, polyB, varargin)
     % Bisect
     t_ub = 10;
     t_lb = 0;
-    bisect_tol = 1e-2;
+    bisect_tol = 5e-2;
     myzero_lb = -1e-6;
     if outer_opt(t_ub, xc_guess, polyA, polyB, polyC) >= 0
         warning('SReachTools:runtime',['10x magnification of the template',...
@@ -86,7 +97,9 @@ function optval = inner_opt(ell, t, xc, polyA, polyB, polyC)
         maximize (ell' * (y+z-xc) - polyC.b'*lambda)
         subject to
             polyA.A * y <= polyA.b;
+            polyA.Ae * y == polyA.be;
             polyB.A * z <= polyB.b;
+            polyB.Ae * z == polyB.be;
             lambda >= 0;
             polyC.A' * lambda == t * ell;            
     cvx_end    
