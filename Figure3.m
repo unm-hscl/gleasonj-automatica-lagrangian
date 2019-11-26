@@ -54,42 +54,42 @@ slice_at_vx_vy = zeros(2,1);
 %% Preparation for set computation
 prob_thresh = 0.8;
 
-n_dir_vecs = 16;
-theta_vec = linspace(0, 2*pi, n_dir_vecs);
-set_of_dir_vecs_ft = [cos(theta_vec);
-                      sin(theta_vec);
-                      zeros(2,n_dir_vecs)];
-n_dir_vecs = 40;
-theta_vec = linspace(0, 2*pi, n_dir_vecs);
-set_of_dir_vecs_cc_open = [cos(theta_vec);
-                           sin(theta_vec);
-                           zeros(2,n_dir_vecs)];
-init_safe_set_affine = Polyhedron('He',[zeros(2,2) eye(2,2) slice_at_vx_vy]);
+% n_dir_vecs = 16;
+% theta_vec = linspace(0, 2*pi, n_dir_vecs);
+% set_of_dir_vecs_ft = [cos(theta_vec);
+%                       sin(theta_vec);
+%                       zeros(2,n_dir_vecs)];
+% n_dir_vecs = 40;
+% theta_vec = linspace(0, 2*pi, n_dir_vecs);
+% set_of_dir_vecs_cc_open = [cos(theta_vec);
+%                            sin(theta_vec);
+%                            zeros(2,n_dir_vecs)];
+% 
+% %% CC (Linear program approach)
+% options = SReachSetOptions('term', 'chance-open', 'verbose', 1, ...
+%     'compute_style', 'max_safe_init','set_of_dir_vecs',set_of_dir_vecs_cc_open);
+% timer_cc_open = tic;
+% [polytope_cc_open, extra_info] = SReachSet('term','chance-open', sys,...
+%     prob_thresh, target_tube, options);  
+% elapsed_time_cc_open = toc(timer_cc_open);
+% 
+% %% Fourier transform (Genz's algorithm and MATLAB's patternsearch)
+% options = SReachSetOptions('term', 'genzps-open', 'verbose', 1, ...
+%     'desired_accuracy', 5e-2, 'set_of_dir_vecs', set_of_dir_vecs_ft);
+% timer_ft = tic;
+% [polytope_ft, ~] = SReachSet('term','genzps-open', sys, prob_thresh,...
+%     target_tube, options);  
+% elapsed_time_ft = toc(timer_ft);
 
-%% CC (Linear program approach)
-options = SReachSetOptions('term', 'chance-open',...
-    'set_of_dir_vecs', set_of_dir_vecs_cc_open,...
-    'init_safe_set_affine', init_safe_set_affine, 'verbose', 1);
-timer_cc_open = tic;
-[polytope_cc_open, extra_info] = SReachSet('term','chance-open', sys,...
-    prob_thresh, target_tube, options);  
-elapsed_time_cc_open = toc(timer_cc_open);
-
-%% Fourier transform (Genz's algorithm and MATLAB's patternsearch)
-options = SReachSetOptions('term', 'genzps-open',...
-    'desired_accuracy', 5e-2, 'set_of_dir_vecs', set_of_dir_vecs_ft,...
-    'init_safe_set_affine', init_safe_set_affine, 'verbose', 1);
-timer_ft = tic;
-[polytope_ft, ~] = SReachSet('term','genzps-open', sys, prob_thresh,...
-    target_tube, options);  
-elapsed_time_ft = toc(timer_ft);
-
-%% Lagrangian underapproximation
-vecs_per_orth = [6, 10, 20, 50];
+% %% Lagrangian underapproximation
+vecs_per_orth = [6]%[4, 8, 32, 64];
 lag_comptimes = zeros(size(vecs_per_orth));
+elapsed_time_cc_open = zeros(size(vecs_per_orth));
+elapsed_time_genzps = zeros(size(vecs_per_orth));
 lag_polys = [];
 n_dim = sys.state_dim + sys.input_dim;
 for lv = 1:length(vecs_per_orth)
+    %% Lagrangian underapproximation
     fprintf('Lagrangian approximation with %d vectors per orthant\n', ...
         vecs_per_orth(lv));
     fprintf('------------------------------------------------------------\n');
@@ -99,14 +99,34 @@ for lv = 1:length(vecs_per_orth)
         'system', sys, 'vf_enum_method', 'lrs', 'verbose', 1,...
         'n_vertices', 2^n_dim * vecs_per_orth(lv) + 2*n_dim);
     elapsed_time_lagunder_options = toc(timer_lagunder_options);
-
-    disp(elapsed_time_lagunder_options)
-
+%     disp(elapsed_time_lagunder_options)
+    
     timer_lagunder = tic;
     [polytope_lagunder, extra_info_under] = SReachSet('term', 'lag-under', ...
         sys, prob_thresh, target_tube, lagunder_options);
     lag_comptimes(lv) = toc(timer_lagunder);
     lag_polys = [lag_polys; polytope_lagunder];
+
+    %% CC (Linear program approach)
+%     equi_dir_vecs_over_state=lagunder_options.equi_dir_vecs(1:sys.state_dim,:);
+    equi_dir_vecs_over_state=spreadPointsOnUnitSphere(sys.state_dim,...
+                        lagunder_options.n_vertices, lagunder_options.verbose);
+    ccopen_options = SReachSetOptions('term', 'chance-open', 'verbose', 1, ...
+        'compute_style', 'max_safe_init', ...
+        'set_of_dir_vecs', equi_dir_vecs_over_state);
+    timer_cc_open = tic;
+    [polytope_cc_open, extra_info] = SReachSet('term','chance-open', sys,...
+        prob_thresh, target_tube, ccopen_options);  
+    elapsed_time_cc_open(lv) = toc(timer_cc_open);
+    
+%     %% Fourier transform (Genz's algorithm and MATLAB's patternsearch)
+%     genzps_options = SReachSetOptions('term', 'genzps-open', 'verbose', 1, ...
+%         'desired_accuracy', 5e-2, ...
+%         'set_of_dir_vecs', equi_dir_vecs_over_state);
+%     timer_genzps = tic;
+%     [polytope_ft, ~] = SReachSet('term','genzps-open', sys, prob_thresh,...
+%         target_tube, genzps_options);  
+%     elapsed_time_genzps(lv) = toc(timer_genzps);
 end
 
 %% Plotting and Monte-Carlo simulation-based validation
@@ -120,8 +140,8 @@ plot(target_set.slice([3,4], slice_at_vx_vy), 'color', [0, 0, 0]);
 ha.Children(1).DisplayName = 'Target Set';
 plot(polytope_cc_open.slice([3,4], slice_at_vx_vy), 'color',[1, 0.6, 0],'alpha', 1);
 ha.Children(1).DisplayName = 'Chance Constraint';
-plot(polytope_ft.slice([3,4], slice_at_vx_vy), 'color',[0, 0.6, 1],'alpha',1);
-ha.Children(1).DisplayName = 'Fourier Transforms';
+% plot(polytope_ft.slice([3,4], slice_at_vx_vy), 'color',[0, 0.6, 1],'alpha',1);
+% ha.Children(1).DisplayName = 'Fourier Transforms';
 cl = [0, 0.5, 0.5];
 for lv = length(lag_polys):-1:1
     poly = lag_polys(lv);
@@ -147,14 +167,14 @@ hf.Units = 'inches';
 hf.Position(3) = 3.2;
 
 ha.Position = [0.1497, 0.4677, 0.7650, 0.4892];
-hl.Poisiton = [0.0398, 0.0202, 0.9213, 0.3298];
+hl.Position = [0.0398, 0.0202, 0.9213, 0.3298];
 hl.Box = 'off';
 
 print(gcf, '-r200', '-dpng', sprintf('~/Dropbox/cwh-ex-%s.png', datestr(now, 'yyyy-mm-dd-HHMMSS')));
 
 %% Compute time
 fprintf('Elapsed time: \n');
-fprintf('    Fourier Transforms (genzps-open) %1.3f\n', elapsed_time_ft);
+fprintf('    Fourier Transforms (genzps-open) %1.3f\n', elapsed_time_genzps);
 fprintf('    Chance Constraints (chance-open) %1.3f\n', elapsed_time_cc_open);
 for lv = 1:length(vecs_per_orth)
     fprintf('    Lagrangian Approximation with %d Directions %1.3f\n', ... 
