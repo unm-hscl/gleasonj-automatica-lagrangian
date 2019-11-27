@@ -24,6 +24,7 @@ sys = getCwhLtiSystem(4, Polyhedron('lb', -umax*ones(2,1),...
 %% Target tube construction --- reach-avoid specification
 time_horizon=5;          % Stay within a line of sight cone for 4 time steps and 
                          % reach the target at t=5% Safe Set --- LoS cone
+slice_at_vx_vy = 0*ones(2,1);
 % Safe set definition --- LoS cone |x|<=y and y\in[0,ymax] and |vx|<=vxmax and 
 % |vy|<=vymax
 ymax = 2;
@@ -44,85 +45,65 @@ b_safe_set = [0;
               vymax;
               vymax];
 safe_set = Polyhedron(A_safe_set, b_safe_set);
-
+safe_set_init = safe_set.intersect(Polyhedron('He', ...
+    [zeros(2) eye(2) slice_at_vx_vy]));
 % Target set --- Box [-0.1,0.1]x[-0.1,0]x[-0.01,0.01]x[-0.01,0.01]
 target_set = Polyhedron('lb', [-0.1; -0.1; -0.01; -0.01],...
                         'ub', [0.1; 0; 0.01; 0.01]);
-target_tube = Tube('reach-avoid',safe_set, target_set, time_horizon);                    
-slice_at_vx_vy = zeros(2,1);
+% target_tube = Tube('reach-avoid',safe_set, target_set, time_horizon);                    
+target_tube = Tube(safe_set_init, safe_set, safe_set, safe_set, safe_set, ...
+    target_set);
 
 %% Preparation for set computation
 prob_thresh = 0.8;
 
-% n_dir_vecs = 16;
-% theta_vec = linspace(0, 2*pi, n_dir_vecs);
-% set_of_dir_vecs_ft = [cos(theta_vec);
-%                       sin(theta_vec);
-%                       zeros(2,n_dir_vecs)];
-% n_dir_vecs = 40;
-% theta_vec = linspace(0, 2*pi, n_dir_vecs);
-% set_of_dir_vecs_cc_open = [cos(theta_vec);
-%                            sin(theta_vec);
-%                            zeros(2,n_dir_vecs)];
-% 
-% %% CC (Linear program approach)
-% options = SReachSetOptions('term', 'chance-open', 'verbose', 1, ...
-%     'compute_style', 'max_safe_init','set_of_dir_vecs',set_of_dir_vecs_cc_open);
-% timer_cc_open = tic;
-% [polytope_cc_open, extra_info] = SReachSet('term','chance-open', sys,...
-%     prob_thresh, target_tube, options);  
-% elapsed_time_cc_open = toc(timer_cc_open);
-% 
-% %% Fourier transform (Genz's algorithm and MATLAB's patternsearch)
-% options = SReachSetOptions('term', 'genzps-open', 'verbose', 1, ...
-%     'desired_accuracy', 5e-2, 'set_of_dir_vecs', set_of_dir_vecs_ft);
-% timer_ft = tic;
-% [polytope_ft, ~] = SReachSet('term','genzps-open', sys, prob_thresh,...
-%     target_tube, options);  
-% elapsed_time_ft = toc(timer_ft);
-
-% %% Lagrangian underapproximation
 vecs_per_orth = [6]%[4, 8, 32, 64];
 lag_comptimes = zeros(size(vecs_per_orth));
 elapsed_time_cc_open = zeros(size(vecs_per_orth));
 elapsed_time_genzps = zeros(size(vecs_per_orth));
 lag_polys = [];
 n_dim = sys.state_dim + sys.input_dim;
+
 for lv = 1:length(vecs_per_orth)
-    %% Lagrangian underapproximation
-    fprintf('Lagrangian approximation with %d vectors per orthant\n', ...
-        vecs_per_orth(lv));
-    fprintf('------------------------------------------------------------\n');
+    % Option for Lagrangian underapproximation
     timer_lagunder_options = tic;
     lagunder_options = SReachSetOptions('term', 'lag-under',...
         'bound_set_method', 'ellipsoid', 'compute_style','support',...
         'system', sys, 'vf_enum_method', 'lrs', 'verbose', 1,...
         'n_vertices', 2^n_dim * vecs_per_orth(lv) + 2*n_dim);
     elapsed_time_lagunder_options = toc(timer_lagunder_options);
-%     disp(elapsed_time_lagunder_options)
     
+    % Option for chance-const and genzps
+    equi_dir_vecs_over_state = spreadPointsOnUnitSphere(sys.state_dim, ...
+                        lagunder_options.n_vertices, lagunder_options.verbose);
+    rand_index = randperm(size(equi_dir_vecs_over_state,2));
+    equi_dir_vecs_over_state = equi_dir_vecs_over_state(:, ...
+        rand_index(1:lagunder_options.n_vertices));
+    
+    ccopen_options = SReachSetOptions('term', 'chance-open', 'verbose', 1, ...
+        'compute_style', 'mve', 'set_of_dir_vecs', equi_dir_vecs_over_state);
+
+    genzps_options = SReachSetOptions('term', 'genzps-open', 'verbose', 1, ...
+        'desired_accuracy', 5e-2, ...
+        'set_of_dir_vecs', ccopen_options.set_of_dir_vecs);
+
+    %% Lagrangian underapproximation
+    fprintf('Lagrangian approximation with %d vectors per orthant\n', ...
+        vecs_per_orth(lv));
+    fprintf('------------------------------------------------------------\n');
     timer_lagunder = tic;
     [polytope_lagunder, extra_info_under] = SReachSet('term', 'lag-under', ...
         sys, prob_thresh, target_tube, lagunder_options);
     lag_comptimes(lv) = toc(timer_lagunder);
     lag_polys = [lag_polys; polytope_lagunder];
 
-    %% CC (Linear program approach)
-%     equi_dir_vecs_over_state=lagunder_options.equi_dir_vecs(1:sys.state_dim,:);
-    equi_dir_vecs_over_state=spreadPointsOnUnitSphere(sys.state_dim,...
-                        lagunder_options.n_vertices, lagunder_options.verbose);
-    ccopen_options = SReachSetOptions('term', 'chance-open', 'verbose', 1, ...
-        'compute_style', 'max_safe_init', ...
-        'set_of_dir_vecs', equi_dir_vecs_over_state);
+    %% CC (Linear program approach)    
     timer_cc_open = tic;
     [polytope_cc_open, extra_info] = SReachSet('term','chance-open', sys,...
         prob_thresh, target_tube, ccopen_options);  
     elapsed_time_cc_open(lv) = toc(timer_cc_open);
     
 %     %% Fourier transform (Genz's algorithm and MATLAB's patternsearch)
-%     genzps_options = SReachSetOptions('term', 'genzps-open', 'verbose', 1, ...
-%         'desired_accuracy', 5e-2, ...
-%         'set_of_dir_vecs', equi_dir_vecs_over_state);
 %     timer_genzps = tic;
 %     [polytope_ft, ~] = SReachSet('term','genzps-open', sys, prob_thresh,...
 %         target_tube, genzps_options);  
@@ -133,13 +114,14 @@ end
 hf = figure();
 box on;
 hold on;
-plot(safe_set.slice([3,4], slice_at_vx_vy), 'color', [0.95, 0.95, 0]);
+plot(safe_set_init.slice([3,4], slice_at_vx_vy), 'color', [0.95, 0.95, 0]);
 ha = gca;
 ha.Children(1).DisplayName = 'Safe Set';
 plot(target_set.slice([3,4], slice_at_vx_vy), 'color', [0, 0, 0]);
 ha.Children(1).DisplayName = 'Target Set';
 plot(polytope_cc_open.slice([3,4], slice_at_vx_vy), 'color',[1, 0.6, 0],'alpha', 1);
-ha.Children(1).DisplayName = 'Chance Constraint';
+ha.Children(1).DisplayName = sprintf('Chance Constraint: %d Directions', ...
+         2^n_dim * vecs_per_orth(lv) + 2*n_dim);
 % plot(polytope_ft.slice([3,4], slice_at_vx_vy), 'color',[0, 0.6, 1],'alpha',1);
 % ha.Children(1).DisplayName = 'Fourier Transforms';
 cl = [0, 0.5, 0.5];
@@ -175,10 +157,11 @@ print(gcf, '-r200', '-dpng', sprintf('~/Dropbox/cwh-ex-%s.png', datestr(now, 'yy
 %% Compute time
 fprintf('Elapsed time: \n');
 fprintf('    Fourier Transforms (genzps-open) %1.3f\n', elapsed_time_genzps);
-fprintf('    Chance Constraints (chance-open) %1.3f\n', elapsed_time_cc_open);
+fprintf('    Chance Constraints (chance-open) with %d Directions %1.3f\n', ...
+    size(equi_dir_vecs_over_state,2), elapsed_time_cc_open);
 for lv = 1:length(vecs_per_orth)
-    fprintf('    Lagrangian Approximation with %d Directions %1.3f\n', ... 
-        2^n_dim * vecs_per_orth(lv) + 2*n_dim, lag_comptimes(lv)); 
+    fprintf('    Lagrangian Approximation         with %d Directions %1.3f\n', ... 
+        lagunder_options.n_vertices, lag_comptimes(lv)); 
 end
 
 %% Helper functions
