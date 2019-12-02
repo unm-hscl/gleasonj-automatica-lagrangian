@@ -57,7 +57,7 @@ target_tube = Tube(safe_set_init, safe_set, safe_set, safe_set, safe_set, ...
 %% Preparation for set computation
 prob_thresh = 0.8;
 
-vecs_per_orth = [6]%[4, 8, 32, 64];
+vecs_per_orth = [1]%[4, 8, 32, 64];
 lag_comptimes = zeros(size(vecs_per_orth));
 elapsed_time_cc_open = zeros(size(vecs_per_orth));
 elapsed_time_genzps = zeros(size(vecs_per_orth));
@@ -103,11 +103,11 @@ for lv = 1:length(vecs_per_orth)
         prob_thresh, target_tube, ccopen_options);  
     elapsed_time_cc_open(lv) = toc(timer_cc_open);
     
-%     %% Fourier transform (Genz's algorithm and MATLAB's patternsearch)
-%     timer_genzps = tic;
-%     [polytope_ft, ~] = SReachSet('term','genzps-open', sys, prob_thresh,...
-%         target_tube, genzps_options);  
-%     elapsed_time_genzps(lv) = toc(timer_genzps);
+    %% Fourier transform (Genz's algorithm and MATLAB's patternsearch)
+    timer_genzps = tic;
+    [polytope_ft, ~] = SReachSet('term','genzps-open', sys, prob_thresh,...
+        target_tube, genzps_options);  
+    elapsed_time_genzps(lv) = toc(timer_genzps);
 end
 
 %% Plotting and Monte-Carlo simulation-based validation
@@ -122,8 +122,8 @@ ha.Children(1).DisplayName = 'Target Set';
 plot(polytope_cc_open.slice([3,4], slice_at_vx_vy), 'color',[1, 0.6, 0],'alpha', 1);
 ha.Children(1).DisplayName = sprintf('Chance Constraint: %d Directions', ...
          2^n_dim * vecs_per_orth(lv) + 2*n_dim);
-% plot(polytope_ft.slice([3,4], slice_at_vx_vy), 'color',[0, 0.6, 1],'alpha',1);
-% ha.Children(1).DisplayName = 'Fourier Transforms';
+plot(polytope_ft.slice([3,4], slice_at_vx_vy), 'color',[0, 0.6, 1],'alpha',1);
+ha.Children(1).DisplayName = 'Fourier Transforms';
 cl = [0, 0.5, 0.5];
 for lv = length(lag_polys):-1:1
     poly = lag_polys(lv);
