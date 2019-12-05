@@ -111,24 +111,38 @@ for lv = 1:length(vecs_per_orth)
 end
 
 %% Plotting and Monte-Carlo simulation-based validation
+n_direction_vectors_sv = 60;
 hf = figure();
 box on;
 hold on;
-plot(safe_set_init.slice([3,4], slice_at_vx_vy), 'color', [0.95, 0.95, 0]);
+safe_set_2D = safe_set_init.slice([3,4], slice_at_vx_vy);
+% safe_set_2D = support_vector_based_slice(safe_set, n_direction_vectors_sv, slice_at_vx_vy);
+plot(safe_set_2D, 'color', [0.95, 0.95, 0]);
 ha = gca;
 ha.Children(1).DisplayName = 'Safe Set';
-plot(target_set.slice([3,4], slice_at_vx_vy), 'color', [0, 0, 0]);
+target_set_2D = target_set.slice([3,4], slice_at_vx_vy);
+% target_set_2D = support_vector_based_slice(target_set, n_direction_vectors_sv, slice_at_vx_vy);
+plot(target_set_2D, 'color', [0, 0, 0]);
 ha.Children(1).DisplayName = 'Target Set';
-plot(polytope_cc_open.slice([3,4], slice_at_vx_vy), 'color',[1, 0.6, 0],'alpha', 1);
+% polytope_cc_open_2D = polytope_cc_open.slice([3,4], slice_at_vx_vy)
+polytope_cc_open_2D = support_vector_based_slice( ...
+    Polyhedron('V', polytope_cc_open.V), n_direction_vectors_sv, slice_at_vx_vy);
+plot(polytope_cc_open_2D, 'color',[1, 0.6, 0],'alpha', 1);
 ha.Children(1).DisplayName = sprintf('Chance Constraint: %d Directions', ...
          2^n_dim * vecs_per_orth(lv) + 2*n_dim);
-plot(polytope_ft.slice([3,4], slice_at_vx_vy), 'color',[0, 0.6, 1],'alpha',1);
+% polytope_ft_2D = polytope_ft.slice([3,4], slice_at_vx_vy)
+polytope_ft_2D = support_vector_based_slice( ...
+    Polyhedron('V', polytope_ft.V), n_direction_vectors_sv, slice_at_vx_vy);
+plot(polytope_ft_2D, 'color',[0, 0.6, 1],'alpha',1);
 ha.Children(1).DisplayName = 'Fourier Transforms';
 cl = [0, 0.5, 0.5];
 for lv = length(lag_polys):-1:1
     poly = lag_polys(lv);
     cl = cl + [0, 0.5/4, -0.5/4];
-    plot(poly.slice([3,4], slice_at_vx_vy), 'color', cl, 'alpha',1);
+%     poly_2D = poly.slice([3,4], slice_at_vx_vy);
+    poly_2D = support_vector_based_slice(Polyhedron('V', poly.V), n_direction_vectors_sv, ...
+        slice_at_vx_vy);
+    plot(poly_2D, 'color', cl, 'alpha',1);
     ha.Children(1).DisplayName = sprintf('Lagrangian Approximation: %d Directions', ...
          2^n_dim * vecs_per_orth(lv) + 2*n_dim);
 end
