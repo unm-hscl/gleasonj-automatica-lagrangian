@@ -134,13 +134,13 @@ polytope_cc_open_2D = support_vector_based_slice( ...
     Polyhedron('V', polytope_cc_open.V), n_direction_vectors_sv, slice_at_vx_vy);
 plot(polytope_cc_open_2D, 'color',[1, 0.6, 0],'alpha', 1);
 ha.Children(1).DisplayName = sprintf('Chance Constraint: %d Vecs. per Orthant', ...
-         n_4D_vertices_cc);
+         vecs_per_orth(end));
 % polytope_ft_2D = polytope_ft.slice([3,4], slice_at_vx_vy)
 polytope_ft_2D = support_vector_based_slice( ...
     Polyhedron('V', polytope_ft.V), n_direction_vectors_sv, slice_at_vx_vy);
 plot(polytope_ft_2D, 'color',[0, 0.6, 1],'alpha',1);
 ha.Children(1).DisplayName = sprintf('Fourier Transforms %d Vecs. per Orthant', ...
-         n_4D_vertices_cc);
+         vecs_per_orth(end));
 cl = [0, 0.5, 0.5];
 for lv = length(lag_polys):-1:1
     poly = lag_polys(lv);
@@ -150,7 +150,7 @@ for lv = length(lag_polys):-1:1
         slice_at_vx_vy);
     plot(poly_2D, 'color', cl, 'alpha',1);
     ha.Children(1).DisplayName = sprintf('Lagrangian Approximation: %d Vecs. per Orthant', ...
-         2^n_dim * vecs_per_orth(lv) + 2*n_dim); 
+         vecs_per_orth(lv)); 
 end
 hl = legend();
 hl.Location = 'South';
