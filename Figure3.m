@@ -57,7 +57,7 @@ target_tube = Tube(safe_set_init, safe_set, safe_set, safe_set, safe_set, ...
 %% Preparation for set computation
 prob_thresh = 0.8;
 
-vecs_per_orth = [1]%[4, 8, 32, 64];
+vecs_per_orth = [4]%[4, 8, 32, 64];
 lag_comptimes = zeros(size(vecs_per_orth));
 elapsed_time_cc_open = zeros(size(vecs_per_orth));
 elapsed_time_genzps = zeros(size(vecs_per_orth));
@@ -74,11 +74,12 @@ for lv = 1:length(vecs_per_orth)
     elapsed_time_lagunder_options = toc(timer_lagunder_options);
     
     % Option for chance-const and genzps
+    n_4D_vertices_cc = 2^sys.state_dim * vecs_per_orth(lv) + 2*sys.state_dim;
     equi_dir_vecs_over_state = spreadPointsOnUnitSphere(sys.state_dim, ...
-                        lagunder_options.n_vertices, lagunder_options.verbose);
+                    n_4D_vertices_cc, lagunder_options.verbose);
     rand_index = randperm(size(equi_dir_vecs_over_state,2));
     equi_dir_vecs_over_state = equi_dir_vecs_over_state(:, ...
-        rand_index(1:lagunder_options.n_vertices));
+        rand_index(1:n_4D_vertices_cc));
     
     ccopen_options = SReachSetOptions('term', 'chance-open', 'verbose', 1, ...
         'compute_style', 'mve', 'set_of_dir_vecs', equi_dir_vecs_over_state);
@@ -129,7 +130,7 @@ polytope_cc_open_2D = support_vector_based_slice( ...
     Polyhedron('V', polytope_cc_open.V), n_direction_vectors_sv, slice_at_vx_vy);
 plot(polytope_cc_open_2D, 'color',[1, 0.6, 0],'alpha', 1);
 ha.Children(1).DisplayName = sprintf('Chance Constraint: %d Directions', ...
-         2^n_dim * vecs_per_orth(lv) + 2*n_dim);
+         n_4D_vertices_cc);
 % polytope_ft_2D = polytope_ft.slice([3,4], slice_at_vx_vy)
 polytope_ft_2D = support_vector_based_slice( ...
     Polyhedron('V', polytope_ft.V), n_direction_vectors_sv, slice_at_vx_vy);
@@ -144,7 +145,7 @@ for lv = length(lag_polys):-1:1
         slice_at_vx_vy);
     plot(poly_2D, 'color', cl, 'alpha',1);
     ha.Children(1).DisplayName = sprintf('Lagrangian Approximation: %d Directions', ...
-         2^n_dim * vecs_per_orth(lv) + 2*n_dim);
+         2^n_dim * vecs_per_orth(lv) + 2*n_dim); 
 end
 hl = legend();
 hl.Location = 'South';
