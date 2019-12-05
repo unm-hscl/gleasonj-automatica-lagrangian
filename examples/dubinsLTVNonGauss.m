@@ -1,7 +1,7 @@
 % Prescript running: Initializing srtinit, if it already hasn't been initialized
 close all;clearvars;srtinit;srtinit --version;
 
-time_horizon = 50;
+time_horizon = 20;
 init_heading = pi/10;
 sampling_time = 0.1;
 box_halflength = 4;

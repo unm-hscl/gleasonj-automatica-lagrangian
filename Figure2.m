@@ -114,9 +114,11 @@ point_opts = SReachPointOptions('term', 'particle-open', ...
 srp_time = toc(srp_timer);
 
 % Create a controller based on the underapproximation
+srp_cont_timer = tic;
 srlcontrol = SReachLagController(sys, ... 
     extra_info_under.bounded_dist_set, ...
     extra_info_under.stoch_reach_tube);
+srl_time = toc(srp_cont_timer);
 
 mX_particle   = zeros(2, time_horizon+1);
 mX_lagrangian = zeros(2, time_horizon+1);

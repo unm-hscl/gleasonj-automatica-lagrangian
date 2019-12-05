@@ -51,18 +51,22 @@ safe_set_init = safe_set.intersect(Polyhedron('He', ...
 target_set = Polyhedron('lb', [-0.1; -0.1; -0.01; -0.01],...
                         'ub', [0.1; 0; 0.01; 0.01]);
 % target_tube = Tube('reach-avoid',safe_set, target_set, time_horizon);                    
-target_tube = Tube(safe_set_init, safe_set, safe_set, safe_set, safe_set, ...
+target_tube = Tube(safe_set, safe_set, safe_set, safe_set, safe_set, ...
     target_set);
 
 %% Preparation for set computation
 prob_thresh = 0.8;
 
-vecs_per_orth = [1]%[4, 8, 32, 64];
+% vecs_per_orth = [4, 8, 32, 64];
+vecs_per_orth = [4];
 lag_comptimes = zeros(size(vecs_per_orth));
 elapsed_time_cc_open = zeros(size(vecs_per_orth));
 elapsed_time_genzps = zeros(size(vecs_per_orth));
 lag_polys = [];
 n_dim = sys.state_dim + sys.input_dim;
+
+mkdir('logs')
+diary(sprintf('logs/figure3-%s', datestr(now())))
 
 for lv = 1:length(vecs_per_orth)
     % Option for Lagrangian underapproximation
@@ -75,10 +79,10 @@ for lv = 1:length(vecs_per_orth)
     
     % Option for chance-const and genzps
     equi_dir_vecs_over_state = spreadPointsOnUnitSphere(sys.state_dim, ...
-                        lagunder_options.n_vertices, lagunder_options.verbose);
-    rand_index = randperm(size(equi_dir_vecs_over_state,2));
-    equi_dir_vecs_over_state = equi_dir_vecs_over_state(:, ...
-        rand_index(1:lagunder_options.n_vertices));
+        2^4 * vecs_per_orth(lv) + 2*4, lagunder_options.verbose);
+    % rand_index = randperm(size(equi_dir_vecs_over_state,2));
+    % equi_dir_vecs_over_state = equi_dir_vecs_over_state(:, ...
+    %     rand_index(1:lagunder_options.n_vertices));
     
     ccopen_options = SReachSetOptions('term', 'chance-open', 'verbose', 1, ...
         'compute_style', 'mve', 'set_of_dir_vecs', equi_dir_vecs_over_state);
@@ -104,10 +108,10 @@ for lv = 1:length(vecs_per_orth)
     elapsed_time_cc_open(lv) = toc(timer_cc_open);
     
     %% Fourier transform (Genz's algorithm and MATLAB's patternsearch)
-    timer_genzps = tic;
-    [polytope_ft, ~] = SReachSet('term','genzps-open', sys, prob_thresh,...
-        target_tube, genzps_options);  
-    elapsed_time_genzps(lv) = toc(timer_genzps);
+%     timer_genzps = tic;
+%     [polytope_ft, ~] = SReachSet('term','genzps-open', sys, prob_thresh,...
+%         target_tube, genzps_options);  
+%     elapsed_time_genzps(lv) = toc(timer_genzps);
 end
 
 %% Plotting and Monte-Carlo simulation-based validation
@@ -163,6 +167,9 @@ for lv = 1:length(vecs_per_orth)
     fprintf('    Lagrangian Approximation         with %d Directions %1.3f\n', ... 
         lagunder_options.n_vertices, lag_comptimes(lv)); 
 end
+
+save(sprintf('./var/mats/%s.mat', datestr(now())));
+diary off;
 
 %% Helper functions
 % Plotting function
