@@ -3,14 +3,14 @@
 % Author      : Joseph Gleason
 % Description : Script to generate Figure 3 of Automatica paper "Lagrangian
 %               Approximations for Stochastic Reachability of a Target Tube."
-%
-%	        Dubins Car Fiure
-%
-
+% 
+% 	        Dubins Car Fiure
+% 
+% 
 % Prescript running: Initializing srtinit, if it already hasn't been initialized
-clearvars;
-close all;
-
+% clearvars;
+% close all;
+% 
 % Time horizon
 time_horizon = 21;
 init_heading = pi/10;
@@ -55,7 +55,7 @@ time_const = 1/2*time_horizon;          % Time constant characterize the
 % Target tube definition as well as plotting
 target_tube_cell = cell(time_horizon + 1,1);
 for itt = 0:time_horizon
-    % Define the target set at time itt
+%     Define the target set at time itt
     target_tube_cell{itt+1} = Polyhedron(...
         'lb',center_box(:, itt+1) -box_halflength_at_0*exp(- itt/time_const),...
         'ub', center_box(:, itt+1) + box_halflength_at_0*exp(- itt/time_const));

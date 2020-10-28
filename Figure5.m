@@ -13,7 +13,7 @@ sys = LtiSystem('StateMatrix', 0.8 * eye(2), ...
             
 prob_thresh = 0.8;            
 time_horizon = 2;
-safe_set = 5 * Polyhedron('lb', [-1,-1], 'ub', [1,1]);
+safe_set = 2 * Polyhedron('lb', [-1,-1], 'ub', [1,1]);
 safety_tube = Tube('viability', safe_set, time_horizon);
 
 % %% Dynamic programming computation
