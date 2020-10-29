@@ -1,8 +1,9 @@
 % load('workspace-vars-10-27-2020.mat');
+abstraction_error = 0.5;
 representation_points = Representative_points(:,1:2);
 n_points = sqrt(size(representation_points, 1));
 x = representation_points(end-n_points+1:end, 1);
-Z = reshape(Problem_Solution, n_points, n_points);
+Z = reshape(Problem_Solution, n_points, n_points) - abstraction_error;
 [C_DP]=contourc(x, x, Z, [prob_thresh prob_thresh]);
 
 % Parse the contour matrix
@@ -25,7 +26,7 @@ originalPolytope.minVRep();
 originalVertices = originalPolytope.V;
 n_orig_vertices  = size(originalVertices,1);   
 corners = safe_set.outerApprox.V;
-if n_orig_vertices == 0 && max(Problem_Solution) < prob_thresh
+if n_orig_vertices == 0 && max(max(Z)) < prob_thresh
     % Skip the check if there are no vertices and empty set
 else
     for corner_indx = 1:size(corners,1)
