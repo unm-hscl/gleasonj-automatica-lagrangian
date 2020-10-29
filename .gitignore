@@ -1,4 +1,4 @@
-workspace-vars-*.mat
-sample.mat
+*.fig
+*.mat
 *.asv
 *.m~

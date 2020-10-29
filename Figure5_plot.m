@@ -1,5 +1,10 @@
-% load('workspace-vars-10-27-2020.mat');
+load('workspace-vars-10-27-2020.mat');
 abstraction_error = 0.5;
+% load('workspace-vars-10-29-2020.mat');
+% abstraction_error = 0.4;
+
+
+prob_thresh = 0.1;
 representation_points = Representative_points(:,1:2);
 n_points = sqrt(size(representation_points, 1));
 x = representation_points(end-n_points+1:end, 1);
@@ -50,6 +55,8 @@ zlabel('Value function (FAUST2)');
 
 figure(2);
 clf;
+hold on;
 plot(poly_faust2);
 xlabel('x');
 ylabel('y');
+Figure5;

@@ -1,6 +1,4 @@
-clear;
-clc;
-close all;
+% clear; clc; close all;
 cov_dist = 1.6;
 input_max = 0.5;
 input_space = input_max * Polyhedron('lb', -ones(2, 1), 'ub', ones(2, 1));
@@ -11,7 +9,7 @@ sys = LtiSystem('StateMatrix', 0.8 * eye(2), ...
                 'Disturbance', gaussian_dist, ...
                 'DisturbanceMatrix', eye(2));
             
-prob_thresh = 0.8;            
+prob_thresh = 0.1;            
 time_horizon = 2;
 safe_set = 2 * Polyhedron('lb', [-1,-1], 'ub', [1,1]);
 safety_tube = Tube('viability', safe_set, time_horizon);
@@ -73,8 +71,8 @@ end
 %% Plotting
 figure(2);    
 % clf;    
-plot(safe_set, 'color', 'w','alpha',0);
 hold on;
+plot(safe_set, 'color', 'w','alpha',0);
 % plot(stoch_reach_set_lag_over, 'color', 'm', 'alpha', 0.3);
 % plot(stoch_reach_set_dp(1), 'color', 'c' , 'alpha', 0.5);
 % plot(stoch_reach_set_cco, 'color', 'r');
