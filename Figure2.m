@@ -193,8 +193,31 @@ hl.Box = 'off';
 hl.Position = [0.0977, 0.0531, 0.7983, 0.1247];
 
 
-print(hf, '-r200', '-dpng', sprintf('var/figs/dubincs-car-%s.png', ...
-    datestr(now, 'yyyy-mm-dd-HHMMSS')));
+% print(hf, '-r200', '-dpng', sprintf('var/figs/dubincs-car-%s.png', ...
+%     datestr(now, 'yyyy-mm-dd-HHMMSS')));
+
+% Underapproximation of the stochastic reach set with different template
+n_dim = sys.state_dim + sys.input_dim;
+timer_lagunder_options = tic;
+theta_polytope_vec = linspace(0,2*pi,10)';
+template_poly = Polyhedron('lb', [-2, -1], 'ub', [2, 1]);
+template_poly.computeHRep();
+lagunder_options = SReachSetOptions('term', 'lag-under', ...
+    'bound_set_method', 'polytope', 'template_polytope', ...
+    template_poly, ...
+    'compute_style', 'vfmethod', 'vf_enum_method', 'lrs', 'verbose', 2);
+    
+
+elapsed_time_lagunder_options = toc(timer_lagunder_options);
+
+timer_lagunder = tic;
+[polytope_lagunder2, extra_info_under] = SReachSet('term', 'lag-under', ...
+    sys, prob_thresh, target_tube, lagunder_options);
+elapsed_time_lagunder2 = toc(timer_lagunder);
+
+plot(target_tube(1), 'Color', 'y');
+plot(polytope_lagunder, 'Color', 'g');
+plot(polytope_lagunder2, 'Color', 'c');
 
 % fprintf('Monte-Carlo simulation: Success prob: %1.3f | Time: %1.3f s\n', ...
 %     size(X,2)/n_mcarlo_sims, mc_time);
