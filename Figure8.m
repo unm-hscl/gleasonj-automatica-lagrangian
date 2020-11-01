@@ -54,8 +54,8 @@ target_tube = Tube(target_tube_cell{:});
 n_dim = sys.state_dim + sys.input_dim;
 timer_lagunder_options = tic;
 theta_polytope_vec = linspace(0,2*pi,50)';
-template_poly = Polyhedron('V',[cos(theta_polytope_vec),sin(theta_polytope_vec)]);
-% template_poly = Polyhedron('V', [-1, 1; -0.8, -0.8; 1,-1; 1.5, 0; 1,1]);
+% template_poly = Polyhedron('V',[cos(theta_polytope_vec),sin(theta_polytope_vec)]);
+template_poly = Polyhedron('V', [-1, 0; 0, -1; 1,0; 0, 1]);
 template_poly.computeHRep();
 lagunder_options = SReachSetOptions('term', 'lag-under', ...
     'bound_set_method', 'polytope', 'template_polytope', ...
